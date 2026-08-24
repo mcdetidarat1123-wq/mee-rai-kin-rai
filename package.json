@@ -1,0 +1,9 @@
+{
+  "name": "mee-rai-kin-rai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "มีไรกินไร — ถ่ายรูปวัตถุดิบ ให้ AI ช่วยคิดเมนู",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>มีไรกินไร — คิดเมนูจากของในตู้เย็น</title>
+<meta name="description" content="ถ่ายรูปตู้เย็น ให้ AI ช่วยคิดเมนูอาหารจากวัตถุดิบที่มี">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">🧊</div>
+      <div>
+        <h1>มีไรกินไร</h1>
+        <div class="sub" id="topbarSub">คิดเมนูจากของที่มีอยู่แล้ว</div>
+      </div>
+    </div>
+    <button class="icon-btn" id="btnHelp" title="วิธีใช้">?</button>
+  </div>
+
+  <main>
+
+    <!-- ============ SCREEN: HOME / CAPTURE ============ -->
+    <section class="screen active" id="screen-home">
+      <div class="hero">
+        <div class="dots"></div>
+        <h2>ไม่รู้จะกินอะไร?<br>ถ่ายรูปตู้เย็นให้เราดู</h2>
+        <p>AI จะช่วยดูว่าคุณมีวัตถุดิบอะไรบ้าง แล้วคิดเมนูที่ทำได้จริงให้ทันที พร้อมแคลอรี่และขั้นตอนทำ</p>
+        <label class="capture-box" for="fileInput">
+          <div class="cam">📷</div>
+          <div style="font-weight:700;font-size:14px;">แตะเพื่อถ่ายรูป หรือเลือกรูปตู้เย็น</div>
+          <div class="hint">รองรับ JPG / PNG ไม่เกิน 10MB</div>
+        </label>
+        <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;">
+      </div>
+
+      <div class="section-title">ตู้เย็นล่าสุดของคุณ</div>
+      <div class="chip-scroll" id="homeKitchenPreview"></div>
+
+      <div class="section-title">เมนูที่บันทึกไว้</div>
+      <div id="homeSavedPreview"></div>
+    </section>
+
+    <!-- ============ SCREEN: ANALYZING (loading) ============ -->
+    <section class="screen" id="screen-analyzing">
+      <div class="fridge-loading">
+        <div class="fridge-door-wrap">
+          <div class="fridge-body"></div>
+          <div class="fridge-panel left"></div>
+          <div class="fridge-panel right"></div>
+        </div>
+        <h3 id="loadingTitle">กำลังดูว่าตู้เย็นคุณมีอะไรบ้าง...</h3>
+        <p id="loadingSub">แป๊บนึงนะ กำลังแกะรูปอยู่</p>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: INGREDIENTS (edit) ============ -->
+    <section class="screen" id="screen-ingredients">
+      <div class="back-row">
+        <button class="icon-btn" onclick="goHome()">←</button>
+        <h2>เจอวัตถุดิบเหล่านี้</h2>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-soft);margin:-6px 0 4px;">แตะ ✕ เพื่อลบ หรือเพิ่มวัตถุดิบที่ AI มองไม่เห็น</p>
+      <div class="magnet-row" id="ingredientChips"></div>
+      <button class="magnet add" id="btnAddIngredient" style="margin-top:10px;">+ เพิ่มวัตถุดิบเอง</button>
+
+      <div style="margin-top:26px;">
+        <button class="btn btn-primary btn-block" id="btnGenerateMenus">🍳 คิดเมนูให้หน่อย</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: GENERATING MENUS ============ -->
+    <section class="screen" id="screen-generating">
+      <div class="fridge-loading">
+        <div class="fridge-door-wrap">
+          <div class="fridge-body"></div>
+          <div class="fridge-panel left"></div>
+          <div class="fridge-panel right"></div>
+        </div>
+        <h3>กำลังคิดเมนูให้คุณ...</h3>
+        <p>เช็กว่าอะไรทำเร็ว อะไรแคลอรี่ต่ำ</p>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: MENUS ============ -->
+    <section class="screen" id="screen-menus">
+      <div class="back-row">
+        <button class="icon-btn" onclick="goHome()">←</button>
+        <h2>เมนูที่ทำได้ตอนนี้</h2>
+      </div>
+      <div class="filter-row" id="filterRow"></div>
+      <div class="menu-grid" id="menuGrid"></div>
+    </section>
+
+    <!-- ============ SCREEN: MENU DETAIL ============ -->
+    <section class="screen" id="screen-detail">
+      <div class="back-row">
+        <button class="icon-btn" id="btnDetailBack">←</button>
+        <h2 id="detailName" style="font-size:16px;"></h2>
+      </div>
+
+      <div class="detail-hero"><span id="detailEmoji">🍽️</span></div>
+      <div class="detail-tags" id="detailTags"></div>
+
+      <div class="macro-wrap">
+        <div class="macro-ring">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#e7edf0" stroke-width="10"/>
+            <circle id="ringCarb" cx="46" cy="46" r="40" fill="none" stroke="#3fa484" stroke-width="10" stroke-linecap="round"/>
+            <circle id="ringProtein" cx="46" cy="46" r="40" fill="none" stroke="#f2a93b" stroke-width="10" stroke-linecap="round"/>
+            <circle id="ringFat" cx="46" cy="46" r="40" fill="none" stroke="#e2604f" stroke-width="10" stroke-linecap="round"/>
+          </svg>
+          <div class="kcal"><b id="kcalNum">-</b><span>kcal/จาน</span></div>
+        </div>
+        <div class="macro-legend" id="macroLegend"></div>
+      </div>
+
+      <div class="section-title">วัตถุดิบที่ใช้</div>
+      <table class="ing-table" id="detailIngredients"></table>
+
+      <div class="section-title">วิธีทำ</div>
+      <div id="detailSteps"></div>
+
+      <div style="margin-top:22px;display:flex;gap:10px;">
+        <button class="btn btn-outline" id="btnSaveMenu" style="flex:1;">💾 บันทึกเมนูนี้</button>
+        <button class="btn btn-primary" id="btnFinishCooking" style="flex:1;">ทำเสร็จแล้ว ✅</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: RATING ============ -->
+    <section class="screen" id="screen-rating">
+      <div style="text-align:center;padding:40px 10px;">
+        <div style="font-size:44px;">🎉</div>
+        <h2 style="margin:10px 0 4px;">เก่งมาก! ทำเสร็จแล้ว</h2>
+        <p style="color:var(--text-soft);font-size:13.5px;">เมนูนี้เป็นยังไงบ้าง ให้คะแนนหน่อย</p>
+        <div class="rating-row" id="ratingStars">
+          <button data-v="1">⭐</button><button data-v="2">⭐</button><button data-v="3">⭐</button><button data-v="4">⭐</button><button data-v="5">⭐</button>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="goHome()">กลับหน้าแรก</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: SAVED ============ -->
+    <section class="screen" id="screen-saved">
+      <div class="back-row"><h2>เมนูที่บันทึกไว้</h2></div>
+      <div id="savedList"></div>
+    </section>
+
+    <!-- ============ SCREEN: HISTORY ============ -->
+    <section class="screen" id="screen-history">
+      <div class="back-row"><h2>ประวัติตู้เย็น</h2></div>
+      <div id="historyList"></div>
+    </section>
+
+  </main>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" data-nav="home"><span class="ic">🏠</span>หน้าแรก</button>
+    <button class="nav-btn" data-nav="history"><span class="ic">🧊</span>ประวัติ</button>
+    <button class="nav-btn" data-nav="saved"><span class="ic">💾</span>บันทึก</button>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
