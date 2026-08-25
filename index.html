@@ -7,21 +7,25 @@
 <meta name="description" content="ถ่ายรูปตู้เย็น ให้ AI ช่วยคิดเมนูอาหารจากวัตถุดิบที่มี">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Mitr:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
 
   <div class="topbar">
+    <button class="icon-btn" id="btnMenu" title="เมนู">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
     <div class="brand">
-      <div class="brand-mark">🛒</div>
-      <div>
-        <h1>มีไรกินไร</h1>
-        <div class="sub" id="topbarSub">คิดเมนูจากของที่มีอยู่แล้ว</div>
+      <div class="brand-mark">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
       </div>
+      <h1>มีไรกินไร</h1>
     </div>
-    <button class="icon-btn" id="btnHelp" title="วิธีใช้">?</button>
+    <button class="icon-btn avatar" id="btnHelp" title="วิธีใช้">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    </button>
   </div>
 
   <main>
@@ -29,19 +33,25 @@
     <!-- ============ SCREEN: HOME / CAPTURE ============ -->
     <section class="screen active" id="screen-home">
       <div class="hero">
-        <div class="hero-tag">พิเศษวันนี้</div>
-        <h2>ไม่รู้จะกินอะไร?<br>ถ่ายรูปตู้เย็นให้เราดู</h2>
-        <p>AI จะช่วยดูว่าคุณมีวัตถุดิบอะไรบ้าง แล้วคิดเมนูที่ทำได้จริงให้ทันที พร้อมแคลอรี่และขั้นตอนทำ</p>
+        <div class="icon-circle">
+          <svg class="icon" viewBox="0 0 24 24" stroke="#fff" style="width:26px;height:26px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <h2>สแกนตู้เย็น</h2>
+        <p>มาดูกันว่าวันนี้เราจะทำอะไรกินได้บ้าง!</p>
         <label class="capture-box" for="fileInput">
-          <div class="cam">📷</div>
-          <div style="font-weight:700;font-size:14px;">แตะเพื่อถ่ายรูป หรือเลือกรูปตู้เย็น</div>
-          <div class="hint">รองรับ JPG / PNG ไม่เกิน 10MB</div>
+          <div class="capture-box-inner">
+            <button class="btn btn-outline-white btn-block" type="button" style="pointer-events:none;">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" stroke="#fff"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              อัปโหลดรูปภาพ
+            </button>
+            <div class="hint">รองรับ JPG / PNG ไม่เกิน 10MB</div>
+          </div>
         </label>
         <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;">
       </div>
 
-      <div class="section-title">ตู้เย็นล่าสุดของคุณ</div>
-      <div class="chip-scroll" id="homeKitchenPreview"></div>
+      <div class="section-title">สิ่งที่เพิ่งค้นพบ<span class="see-all" onclick="document.querySelector('[data-nav=history]').click()">ดูทั้งหมด</span></div>
+      <div class="thumb-row" id="homeKitchenPreview"></div>
 
       <div class="section-title">เมนูที่บันทึกไว้</div>
       <div id="homeSavedPreview"></div>
@@ -50,12 +60,7 @@
     <!-- ============ SCREEN: ANALYZING (loading) ============ -->
     <section class="screen" id="screen-analyzing">
       <div class="fridge-loading">
-        <div class="printer-wrap">
-          <div class="printer-paper"></div>
-          <div class="printer-slot"></div>
-          <div class="printer-body"></div>
-          <div class="printer-dot"></div>
-        </div>
+        <div class="spin-plate"></div>
         <h3 id="loadingTitle">กำลังดูว่าตู้เย็นคุณมีอะไรบ้าง...</h3>
         <p id="loadingSub">แป๊บนึงนะ กำลังแกะรูปอยู่</p>
       </div>
@@ -64,33 +69,25 @@
     <!-- ============ SCREEN: INGREDIENTS (edit) ============ -->
     <section class="screen" id="screen-ingredients">
       <div class="back-row">
-        <button class="icon-btn" onclick="goHome()">←</button>
+        <button class="icon-btn" onclick="goHome()"><svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
         <h2>เจอวัตถุดิบเหล่านี้</h2>
       </div>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin:-6px 0 4px;font-family:var(--font-body);">แตะ ✕ เพื่อตัดออก หรือเพิ่มวัตถุดิบที่ AI มองไม่เห็น</p>
-      <div class="receipt">
-        <div class="receipt-head">มีไรกินไร
-          <div class="small">ใบสำรวจตู้เย็น · MARKET RECEIPT</div>
-        </div>
-        <div id="ingredientChips"></div>
-        <div class="receipt-barcode"></div>
-      </div>
-      <button class="add-ing-btn" id="btnAddIngredient">+ เพิ่มวัตถุดิบเอง</button>
+      <p style="font-size:12.5px;color:var(--text-soft);margin:-8px 0 12px;">แตะ ✕ เพื่อลบ หรือเพิ่มวัตถุดิบที่ AI มองไม่เห็น</p>
+      <div class="ing-list" id="ingredientChips"></div>
+      <button class="add-ing-btn" id="btnAddIngredient">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        เพิ่มวัตถุดิบเอง
+      </button>
 
       <div style="margin-top:26px;">
-        <button class="btn btn-primary btn-block" id="btnGenerateMenus">🍳 คิดเมนูให้หน่อย</button>
+        <button class="btn btn-primary btn-block" id="btnGenerateMenus">คิดเมนูให้หน่อย</button>
       </div>
     </section>
 
     <!-- ============ SCREEN: GENERATING MENUS ============ -->
     <section class="screen" id="screen-generating">
       <div class="fridge-loading">
-        <div class="printer-wrap">
-          <div class="printer-paper"></div>
-          <div class="printer-slot"></div>
-          <div class="printer-body"></div>
-          <div class="printer-dot"></div>
-        </div>
+        <div class="spin-plate"></div>
         <h3>กำลังคิดเมนูให้คุณ...</h3>
         <p>เช็กว่าอะไรทำเร็ว อะไรแคลอรี่ต่ำ</p>
       </div>
@@ -99,52 +96,75 @@
     <!-- ============ SCREEN: MENUS ============ -->
     <section class="screen" id="screen-menus">
       <div class="back-row">
-        <button class="icon-btn" onclick="goHome()">←</button>
+        <button class="icon-btn" onclick="goHome()"><svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
         <h2>เมนูที่ทำได้ตอนนี้</h2>
       </div>
       <div class="filter-row" id="filterRow"></div>
-      <div class="menu-grid" id="menuGrid"></div>
+      <div class="menu-list" id="menuGrid"></div>
+      <p class="hint-text">อยากได้ตัวเลือกอื่นจากวัตถุดิบเดิมไหม? กลับไปกด "คิดเมนูให้หน่อย" ใหม่ได้เลย</p>
     </section>
 
     <!-- ============ SCREEN: MENU DETAIL ============ -->
     <section class="screen" id="screen-detail">
-      <div class="back-row">
-        <button class="icon-btn" id="btnDetailBack">←</button>
-        <h2 id="detailName" style="font-size:16px;"></h2>
-      </div>
-
-      <div class="detail-hero"><span id="detailEmoji">🍽️</span></div>
-      <div class="detail-tags" id="detailTags"></div>
-
-      <div class="macro-wrap">
-        <div class="macro-ring">
-          <svg width="92" height="92" viewBox="0 0 92 92">
-            <circle cx="46" cy="46" r="40" fill="none" stroke="#e7edf0" stroke-width="10"/>
-            <circle id="ringCarb" cx="46" cy="46" r="40" fill="none" stroke="#4c7a3f" stroke-width="10" stroke-linecap="round"/>
-            <circle id="ringProtein" cx="46" cy="46" r="40" fill="none" stroke="#e8a93a" stroke-width="10" stroke-linecap="round"/>
-            <circle id="ringFat" cx="46" cy="46" r="40" fill="none" stroke="#d6482f" stroke-width="10" stroke-linecap="round"/>
-          </svg>
-          <div class="kcal"><b id="kcalNum">-</b><span>kcal/จาน</span></div>
+      <div class="detail-hero">
+        <div class="detail-topbar">
+          <button class="icon-btn on-image" id="btnDetailBack"><svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button class="icon-btn on-image heart" id="btnHeart"><svg class="icon" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg></button>
         </div>
-        <div class="macro-legend" id="macroLegend"></div>
+        <span id="detailEmoji">🍽️</span>
       </div>
 
-      <div class="section-title">วัตถุดิบที่ใช้</div>
-      <table class="ing-table" id="detailIngredients"></table>
+      <div class="detail-body">
+        <h2 id="detailName"></h2>
+        <div class="detail-tags" id="detailTags"></div>
 
-      <div class="section-title">วิธีทำ</div>
-      <div id="detailSteps"></div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <b id="statTime">-</b><span>นาที</span>
+          </div>
+          <div class="stat-item">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            <b id="statKcal">-</b><span>kcal</span>
+          </div>
+          <div class="stat-item">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <b id="statDifficulty">-</b><span>ระดับ</span>
+          </div>
+        </div>
 
-      <div style="margin-top:22px;display:flex;gap:10px;">
-        <button class="btn btn-outline" id="btnSaveMenu" style="flex:1;">💾 บันทึกเมนูนี้</button>
-        <button class="btn btn-primary" id="btnFinishCooking" style="flex:1;">ทำเสร็จแล้ว ✅</button>
+        <div class="macro-wrap">
+          <div class="macro-ring">
+            <svg class="ring-svg" width="88" height="88" viewBox="0 0 92 92">
+              <circle cx="46" cy="46" r="40" fill="none" stroke="#ece9e2" stroke-width="10"/>
+              <circle id="ringCarb" cx="46" cy="46" r="40" fill="none" stroke="#16a34a" stroke-width="10" stroke-linecap="round"/>
+              <circle id="ringProtein" cx="46" cy="46" r="40" fill="none" stroke="#d97706" stroke-width="10" stroke-linecap="round"/>
+              <circle id="ringFat" cx="46" cy="46" r="40" fill="none" stroke="#c2410c" stroke-width="10" stroke-linecap="round"/>
+            </svg>
+            <div class="kcal"><b id="kcalNum">-</b><span>kcal/จาน</span></div>
+          </div>
+          <div class="macro-legend" id="macroLegend"></div>
+        </div>
+
+        <div class="section-title">วัตถุดิบที่ใช้<span></span></div>
+        <div class="ing-list ing-table" id="detailIngredients"></div>
+
+        <div class="section-title" style="margin-top:24px;">ขั้นตอนการทำ<span></span></div>
+        <div id="detailSteps"></div>
+
+        <div style="margin-top:22px;display:flex;gap:10px;">
+          <button class="btn btn-outline" id="btnSaveMenu" style="flex:1;">บันทึกเมนูนี้</button>
+          <button class="btn btn-primary" id="btnFinishCooking" style="flex:1;">ทำเสร็จแล้ว</button>
+        </div>
       </div>
     </section>
 
     <!-- ============ SCREEN: RATING ============ -->
     <section class="screen" id="screen-rating">
-      <div style="text-align:center;padding:40px 10px;">
-        <div style="font-size:44px;">🎉</div>
+      <div style="text-align:center;padding:50px 10px;">
+        <div class="empty-box" style="padding:0;">
+          <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" style="width:26px;height:26px;"><path d="M20 6 9 17l-5-5"/></svg></div>
+        </div>
         <h2 style="margin:10px 0 4px;">เก่งมาก! ทำเสร็จแล้ว</h2>
         <p style="color:var(--text-soft);font-size:13.5px;">เมนูนี้เป็นยังไงบ้าง ให้คะแนนหน่อย</p>
         <div class="rating-row" id="ratingStars">
@@ -169,9 +189,19 @@
   </main>
 
   <div class="bottom-nav">
-    <button class="nav-btn active" data-nav="home"><span class="ic">🏠</span>หน้าแรก</button>
-    <button class="nav-btn" data-nav="history"><span class="ic">🧊</span>ประวัติ</button>
-    <button class="nav-btn" data-nav="saved"><span class="ic">💾</span>บันทึก</button>
+    <button class="nav-btn active" data-nav="home">
+      <span class="ic-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg></span>หน้าแรก
+    </button>
+    <button class="nav-btn" data-nav="history">
+      <span class="ic-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"/><polyline points="21 3 21 8 16 8"/><polyline points="12 7 12 12 15.5 14"/></svg></span>ประวัติ
+    </button>
+    <button class="nav-btn" data-nav="saved">
+      <span class="ic-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg></span>บันทึก
+    </button>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
   </div>
 
 </div>

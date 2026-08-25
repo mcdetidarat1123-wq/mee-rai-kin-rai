@@ -4,7 +4,7 @@
       "maxDuration": 30
     },
     "api/menus.js": {
-      "maxDuration": 60
+      "maxDuration": 90
     }
   }
 }

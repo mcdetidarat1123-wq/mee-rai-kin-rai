@@ -8,6 +8,8 @@ const state = {
   activeFilter: 'all',
   currentMenu: null,
   lastRating: 0,
+  isAnalyzing: false,
+  isGenerating: false,
 };
 
 /* ---------- screen navigation ---------- */
@@ -58,12 +60,15 @@ function saveList(key, list){ localStorage.setItem(key, JSON.stringify(list.slic
 $('#fileInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
-  if(file.size > 10*1024*1024){ toast('ไฟล์ใหญ่เกิน 10MB ลองรูปอื่นดูนะ', true); return; }
+  if(state.isAnalyzing){ e.target.value=''; return; }
+  if(file.size > 10*1024*1024){ toast('ไฟล์ใหญ่เกิน 10MB ลองรูปอื่นดูนะ', true); e.target.value=''; return; }
+  if(!file.type.startsWith('image/')){ toast('เลือกไฟล์รูปภาพเท่านั้นนะ', true); e.target.value=''; return; }
   try{
     const {base64, mediaType} = await compressImage(file);
     await analyzeImage(base64, mediaType);
   }catch(err){
     console.error(err);
+    showScreen('screen-home');
     toast('อ่านรูปไม่สำเร็จ ลองใหม่อีกครั้ง', true);
   }
   e.target.value = '';
@@ -93,6 +98,7 @@ function compressImage(file){
 
 /* ---------- analyze ingredients ---------- */
 async function analyzeImage(base64, mediaType){
+  state.isAnalyzing = true;
   showScreen('screen-analyzing');
   $('#loadingTitle').textContent = 'กำลังดูว่าตู้เย็นคุณมีอะไรบ้าง...';
   $('#loadingSub').textContent = 'แป๊บนึงนะ กำลังแกะรูปอยู่';
@@ -102,10 +108,11 @@ async function analyzeImage(base64, mediaType){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ image: base64, mediaType })
     });
-    const data = await res.json();
-    if(!res.ok || !data.ingredients || !data.ingredients.length){
+    let data;
+    try{ data = await res.json(); }catch(e){ data = null; }
+    if(!res.ok || !data || !data.ingredients || !data.ingredients.length){
       showScreen('screen-home');
-      toast(data.error || 'วัตถุดิบน้อยไปหน่อย ลองถ่ายเพิ่มอีก 1-2 อย่างไหม?', true);
+      toast((data && data.error) || 'วัตถุดิบน้อยไปหน่อย ลองถ่ายเพิ่มอีก 1-2 อย่างไหม?', true);
       return;
     }
     state.ingredients = data.ingredients.map(i => ({ name:i.name, amount:i.amount||'', have:true }));
@@ -119,35 +126,72 @@ async function analyzeImage(base64, mediaType){
     console.error(err);
     showScreen('screen-home');
     toast('เชื่อมต่อไม่สำเร็จ ลองอีกครั้งนะ', true);
+  }finally{
+    state.isAnalyzing = false;
   }
 }
 
 function renderIngredients(){
   const wrap = $('#ingredientChips');
   wrap.innerHTML = state.ingredients.map((ing, idx)=>`
-    <div class="receipt-line">
+    <div class="ing-row">
+      <span class="box"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
       <span class="name">${escapeHtml(ing.name)}</span>
       ${ing.amount ? `<span class="amt">${escapeHtml(ing.amount)}</span>` : ''}
-      <button class="rm" onclick="removeIngredient(${idx})" aria-label="ตัดออก">✕</button>
+      <button class="rm" onclick="removeIngredient(${idx})" aria-label="ลบ">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-  `).join('') || `<div class="receipt-line" style="justify-content:center;color:var(--ink-soft);">ยังไม่มีวัตถุดิบ</div>`;
+  `).join('') || `<div class="ing-row" style="justify-content:center;color:var(--text-soft);">ยังไม่มีวัตถุดิบ</div>`;
 }
 function removeIngredient(idx){
   state.ingredients.splice(idx,1);
   renderIngredients();
 }
+/* ---------- modal (replaces prompt/alert for reliability in in-app browsers) ---------- */
+function openModal(html){
+  $('#modalBox').innerHTML = html;
+  $('#modalOverlay').classList.add('open');
+}
+function closeModal(){
+  $('#modalOverlay').classList.remove('open');
+  $('#modalBox').innerHTML = '';
+}
+$('#modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
+window.closeModal = closeModal;
+
 $('#btnAddIngredient').addEventListener('click', ()=>{
-  const name = prompt('เพิ่มวัตถุดิบ (เช่น ไข่ไก่, หมูสับ)');
-  if(name && name.trim()){
-    state.ingredients.push({ name:name.trim(), amount:'', have:true });
+  openModal(`
+    <h3>เพิ่มวัตถุดิบ</h3>
+    <input type="text" id="modalIngInput" placeholder="เช่น ไข่ไก่, หมูสับ" autofocus>
+    <div class="modal-error" id="modalIngError">พิมพ์ชื่อวัตถุดิบก่อนนะ</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline-neutral" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary" id="modalIngConfirm">เพิ่ม</button>
+    </div>
+  `);
+  const input = $('#modalIngInput');
+  const confirmAdd = ()=>{
+    const name = input.value.trim();
+    if(!name){ $('#modalIngError').classList.add('show'); return; }
+    state.ingredients.push({ name, amount:'', have:true });
     renderIngredients();
-  }
+    closeModal();
+  };
+  $('#modalIngConfirm').addEventListener('click', confirmAdd);
+  input.addEventListener('input', ()=> $('#modalIngError').classList.remove('show'));
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') confirmAdd(); });
+  setTimeout(()=> input.focus(), 50);
 });
 
 /* ---------- generate menus ---------- */
 $('#btnGenerateMenus').addEventListener('click', generateMenus);
 async function generateMenus(){
+  if(state.isGenerating) return;
   if(!state.ingredients.length){ toast('เพิ่มวัตถุดิบก่อนนะ', true); return; }
+  state.isGenerating = true;
+  const genBtn = $('#btnGenerateMenus');
+  genBtn.disabled = true;
   showScreen('screen-generating');
   try{
     const res = await fetch('/api/menus', {
@@ -155,10 +199,11 @@ async function generateMenus(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ ingredients: state.ingredients })
     });
-    const data = await res.json();
-    if(!res.ok || !data.menus || !data.menus.length){
+    let data;
+    try{ data = await res.json(); }catch(e){ data = null; }
+    if(!res.ok || !data || !data.menus || !data.menus.length){
       showScreen('screen-ingredients');
-      toast(data.error || 'คิดเมนูไม่สำเร็จ ลองใหม่อีกครั้ง', true);
+      toast((data && data.error) || 'คิดเมนูไม่สำเร็จ ลองใหม่อีกครั้ง', true);
       return;
     }
     state.menus = data.menus.map((m,i)=>({ ...m, id: m.id || ('m'+i) }));
@@ -171,6 +216,9 @@ async function generateMenus(){
     console.error(err);
     showScreen('screen-ingredients');
     toast('เชื่อมต่อไม่สำเร็จ ลองอีกครั้งนะ', true);
+  }finally{
+    state.isGenerating = false;
+    genBtn.disabled = false;
   }
 }
 
@@ -214,7 +262,7 @@ function renderMenuGrid(){
   const list = filteredMenus();
   const grid = $('#menuGrid');
   if(!list.length){
-    grid.innerHTML = `<div class="empty-box" style="grid-column:1/-1;"><span class="big">🍽️</span><p>ไม่มีเมนูตรงตัวกรองนี้ ลองตัวกรองอื่นดูนะ</p></div>`;
+    grid.innerHTML = `<div class="empty-box"><div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"/></svg></div><p>ไม่มีเมนูตรงตัวกรองนี้ ลองตัวกรองอื่นดูนะ</p></div>`;
     return;
   }
   grid.innerHTML = list.map(m=>`
@@ -225,8 +273,12 @@ function renderMenuGrid(){
       </div>
       <div class="body">
         <h4>${escapeHtml(m.name)}</h4>
-        <div class="meta"><span>⏱️ ${m.timeMinutes||'-'} น.</span><span>🔥 ${m.calories||'-'} kcal</span></div>
-        <div class="match">ใช้ของที่มี ${m.matchPercent||0}%</div>
+        <div class="meta-row">
+          <span class="meta-item"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${m.timeMinutes||'-'} นาที</span>
+          <span class="meta-item"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>${m.calories||'-'} kcal</span>
+          <span class="meta-item"><span class="dot"></span>ใช้ของที่มี ${m.matchPercent||0}%</span>
+        </div>
+        <button class="btn btn-outline btn-sm btn-block" style="pointer-events:none;">ดูสูตรเมนูนี้</button>
       </div>
     </button>
   `).join('');
@@ -239,8 +291,12 @@ function openMenuDetail(id){
   state.currentMenu = menu;
   $('#detailName').textContent = menu.name;
   $('#detailEmoji').textContent = menu.emoji || '🍽️';
-  $('#detailTags').innerHTML = (menu.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')
-    + `<span class="tag">⏱️ ${menu.timeMinutes||'-'} นาที</span><span class="tag">ระดับ ${menu.difficulty||'ปานกลาง'}</span>`;
+  $('#detailTags').innerHTML = (menu.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('');
+  $('#statTime').textContent = menu.timeMinutes || '-';
+  $('#statKcal').textContent = menu.calories || '-';
+  $('#statDifficulty').textContent = menu.difficulty || 'ปานกลาง';
+  const alreadySaved = loadList(STORE_KEYS.saved).some(m=>m.name===menu.name);
+  $('#btnHeart').classList.toggle('active', alreadySaved);
 
   // macro ring
   const macros = menu.macros || {carb:0,protein:0,fat:0};
@@ -252,20 +308,22 @@ function openMenuDetail(id){
   setRing('#ringFat', fatFrac, (carbFrac+proteinFrac)*360, C);
   $('#kcalNum').textContent = menu.calories || '-';
   $('#macroLegend').innerHTML = `
-    <div class="row"><span class="dot" style="background:#4c7a3f"></span>คาร์บ <b class="mono">${macros.carb||0}g</b></div>
-    <div class="row"><span class="dot" style="background:#e8a93a"></span>โปรตีน <b class="mono">${macros.protein||0}g</b></div>
-    <div class="row"><span class="dot" style="background:#d6482f"></span>ไขมัน <b class="mono">${macros.fat||0}g</b></div>
+    <div class="row"><span class="dot2" style="background:#16a34a"></span>คาร์บ <b>${macros.carb||0}g</b></div>
+    <div class="row"><span class="dot2" style="background:#d97706"></span>โปรตีน <b>${macros.protein||0}g</b></div>
+    <div class="row"><span class="dot2" style="background:#c2410c"></span>ไขมัน <b>${macros.fat||0}g</b></div>
   `;
 
-  // ingredients table
+  // ingredients list
   const rows = (menu.ingredientsUsed||[]).map(ing=>`
-    <tr>
-      <td><span class="ing-check ${ing.have?'have':'need'}">${ing.have?'✓':'!'}</span></td>
-      <td>${escapeHtml(ing.name)}</td>
-      <td>${escapeHtml(ing.amount||'')}</td>
-    </tr>
+    <div class="ing-row">
+      <span class="box ${ing.have?'':'need'}" style="${ing.have?'':'background:var(--red-100);color:var(--red);'}">
+        ${ing.have ? `<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>` : `<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`}
+      </span>
+      <span class="name">${escapeHtml(ing.name)}</span>
+      <span class="amt">${escapeHtml(ing.amount||'')}</span>
+    </div>
   `).join('');
-  $('#detailIngredients').innerHTML = rows || `<tr><td colspan="3" style="color:var(--text-soft);">ไม่มีข้อมูลวัตถุดิบ</td></tr>`;
+  $('#detailIngredients').innerHTML = rows || `<div class="ing-row" style="color:var(--text-soft);">ไม่มีข้อมูลวัตถุดิบ</div>`;
 
   // steps
   $('#detailSteps').innerHTML = (menu.steps||[]).map((s,i)=>`
@@ -274,7 +332,7 @@ function openMenuDetail(id){
       <div style="flex:1;">
         <h5>${escapeHtml(s.title||('ขั้นตอนที่ '+(i+1)))}</h5>
         <p>${escapeHtml(s.detail||'')}</p>
-        ${s.timerSeconds ? `<div class="timer-chip" data-seconds="${s.timerSeconds}" data-remaining="${s.timerSeconds}">⏲ <span class="tlabel">${formatTime(s.timerSeconds)}</span><button class="tbtn" onclick="toggleTimer(this)">เริ่ม</button></div>` : ''}
+        ${s.timerSeconds ? `<div class="timer-chip" data-seconds="${s.timerSeconds}" data-remaining="${s.timerSeconds}"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="tlabel">${formatTime(s.timerSeconds)}</span><button class="tbtn" onclick="toggleTimer(this)">เริ่ม</button></div>` : ''}
       </div>
     </div>
   `).join('') || `<div class="empty-box"><p>ไม่มีขั้นตอนทำอาหาร</p></div>`;
@@ -319,18 +377,33 @@ function toggleTimer(btn){
 }
 
 $('#btnDetailBack').addEventListener('click', ()=> showScreen('screen-menus'));
+$('#btnHeart').addEventListener('click', ()=>{
+  if(!state.currentMenu) return;
+  const isActive = $('#btnHeart').classList.contains('active');
+  if(isActive){
+    const list = loadList(STORE_KEYS.saved).filter(m=>m.name!==state.currentMenu.name);
+    saveList(STORE_KEYS.saved, list);
+    $('#btnHeart').classList.remove('active');
+    toast('เอาออกจากรายการบันทึกแล้ว');
+  }else{
+    saveCurrentMenu();
+  }
+});
 
-$('#btnSaveMenu').addEventListener('click', ()=>{
+function saveCurrentMenu(){
   if(!state.currentMenu) return;
   const list = loadList(STORE_KEYS.saved);
   if(list.some(m=>m.name===state.currentMenu.name)){
+    $('#btnHeart').classList.add('active');
     toast('บันทึกเมนูนี้ไว้แล้ว');
     return;
   }
   list.unshift({ ...state.currentMenu, savedAt: Date.now() });
   saveList(STORE_KEYS.saved, list);
-  toast('บันทึกเมนูแล้ว 💾');
-});
+  $('#btnHeart').classList.add('active');
+  toast('บันทึกเมนูแล้ว');
+}
+$('#btnSaveMenu').addEventListener('click', saveCurrentMenu);
 
 $('#btnFinishCooking').addEventListener('click', ()=>{
   state.lastRating = 0;
@@ -346,15 +419,21 @@ $('#ratingStars').addEventListener('click', (e)=>{
 });
 
 /* ---------- saved / history screens ---------- */
+const ICON_CLOCK = `<svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const ICON_FLAME = `<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+const ICON_HISTORY = `<svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"/><polyline points="21 3 21 8 16 8"/><polyline points="12 7 12 12 15.5 14"/></svg>`;
+const ICON_CAMERA_LG = `<svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>`;
+const ICON_SAVE_LG = `<svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px;"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>`;
+
 function renderSaved(){
   const list = loadList(STORE_KEYS.saved);
   const wrap = $('#savedList');
   wrap.innerHTML = list.length ? list.map(m=>`
     <button class="list-card" onclick='openSavedMenu(${JSON.stringify(m.id||m.name).replace(/'/g,"&#39;")})'>
       <div class="ic">${m.emoji||'🍽️'}</div>
-      <div class="txt"><h3>${escapeHtml(m.name)}</h3><div class="meta">⏱️${m.timeMinutes||'-'} น. · 🔥${m.calories||'-'} kcal</div></div>
+      <div class="txt"><h3>${escapeHtml(m.name)}</h3><div class="meta">${m.timeMinutes||'-'} นาที · ${m.calories||'-'} kcal</div></div>
     </button>
-  `).join('') : `<div class="empty-box"><span class="big">💾</span><p>ยังไม่มีเมนูที่บันทึกไว้เลย ลองคิดเมนูแล้วกดบันทึกดูนะ</p></div>`;
+  `).join('') : `<div class="empty-box"><div class="icon-wrap">${ICON_SAVE_LG}</div><p>ยังไม่มีเมนูที่บันทึกไว้เลย ลองคิดเมนูแล้วกดบันทึกดูนะ</p></div>`;
 }
 function openSavedMenu(idOrName){
   const list = loadList(STORE_KEYS.saved);
@@ -370,36 +449,52 @@ function renderHistory(){
   const wrap = $('#historyList');
   wrap.innerHTML = hist.length ? hist.map(h=>`
     <div class="list-card" style="align-items:flex-start;">
-      <div class="ic">🧊</div>
+      <div class="ic">${ICON_HISTORY}</div>
       <div class="txt">
         <h3>${new Date(h.ts).toLocaleDateString('th-TH', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</h3>
         <div class="meta">${h.ingredients.map(i=>escapeHtml(i.name)).join(', ')}</div>
       </div>
     </div>
-  `).join('') : `<div class="empty-box"><span class="big">🧊</span><p>ยังไม่มีประวัติการถ่ายรูปตู้เย็นเลย</p></div>`;
+  `).join('') : `<div class="empty-box"><div class="icon-wrap">${ICON_HISTORY}</div><p>ยังไม่มีประวัติการถ่ายรูปตู้เย็นเลย</p></div>`;
 }
 
 function refreshHome(){
   const hist = loadList(STORE_KEYS.kitchen).slice(0,6);
   $('#homeKitchenPreview').innerHTML = hist.length ? hist.map(h=>`
-    <div class="kitchen-chip">
-      <div class="ic">🧊</div>
-      <div class="lbl">${h.ingredients.slice(0,2).map(i=>escapeHtml(i.name)).join(', ')}</div>
+    <div class="thumb-card">
+      <div class="art">🍳</div>
+      <div class="scrim">
+        <div class="txt">
+          <h4>${h.ingredients.slice(0,2).map(i=>escapeHtml(i.name)).join(', ')}</h4>
+          <div class="meta">${ICON_CLOCK} ${new Date(h.ts).toLocaleDateString('th-TH', {day:'numeric',month:'short'})}</div>
+        </div>
+      </div>
     </div>
-  `).join('') : `<div class="empty-box" style="padding:16px;"><span class="big">📷</span><p>เริ่มจากการถ่ายรูปของในตู้เย็น แล้วเราจะช่วยคิดเมนูให้คุณ</p></div>`;
+  `).join('') : `<div class="empty-box" style="padding:16px;"><div class="icon-wrap">${ICON_CAMERA_LG}</div><p>เริ่มจากการถ่ายรูปของในตู้เย็น แล้วเราจะช่วยคิดเมนูให้คุณ</p></div>`;
 
   const saved = loadList(STORE_KEYS.saved).slice(0,3);
   $('#homeSavedPreview').innerHTML = saved.length ? saved.map(m=>`
     <button class="list-card" onclick='openSavedMenu(${JSON.stringify(m.id||m.name).replace(/'/g,"&#39;")})'>
       <div class="ic">${m.emoji||'🍽️'}</div>
-      <div class="txt"><h3>${escapeHtml(m.name)}</h3><div class="meta">⏱️${m.timeMinutes||'-'} น. · 🔥${m.calories||'-'} kcal</div></div>
+      <div class="txt"><h3>${escapeHtml(m.name)}</h3><div class="meta">${m.timeMinutes||'-'} นาที · ${m.calories||'-'} kcal</div></div>
     </button>
-  `).join('') : `<div class="empty-box" style="padding:16px;"><span class="big">💾</span><p>ยังไม่มีเมนูที่บันทึกไว้เลย</p></div>`;
+  `).join('') : `<div class="empty-box" style="padding:16px;"><div class="icon-wrap">${ICON_SAVE_LG}</div><p>ยังไม่มีเมนูที่บันทึกไว้เลย</p></div>`;
 }
 
 /* ---------- help ---------- */
 $('#btnHelp').addEventListener('click', ()=>{
-  alert('วิธีใช้:\n1) ถ่ายรูปตู้เย็นหรือวัตถุดิบที่มี\n2) ตรวจสอบ/แก้ไขรายการวัตถุดิบ\n3) กด "คิดเมนูให้หน่อย"\n4) เลือกเมนูที่ชอบ ดูวิธีทำทีละขั้นตอน\n5) บันทึกเมนูโปรดไว้ดูภายหลังได้');
+  openModal(`
+    <h3>วิธีใช้</h3>
+    <p>1) ถ่ายรูปตู้เย็นหรือวัตถุดิบที่มี</p>
+    <p>2) ตรวจสอบ/แก้ไขรายการวัตถุดิบ</p>
+    <p>3) กด "คิดเมนูให้หน่อย"</p>
+    <p>4) เลือกเมนูที่ชอบ ดูวิธีทำทีละขั้นตอน</p>
+    <p>5) บันทึกเมนูโปรดไว้ดูภายหลังได้</p>
+    <div class="modal-actions"><button class="btn btn-primary" style="flex:1;" onclick="closeModal()">เข้าใจแล้ว</button></div>
+  `);
+});
+$('#btnMenu').addEventListener('click', ()=>{
+  $('#btnHelp').click();
 });
 
 function escapeHtml(str=''){
