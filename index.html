@@ -7,7 +7,7 @@
 <meta name="description" content="ถ่ายรูปตู้เย็น ให้ AI ช่วยคิดเมนูอาหารจากวัตถุดิบที่มี">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Mitr:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
 
   <div class="topbar">
     <div class="brand">
-      <div class="brand-mark">🧊</div>
+      <div class="brand-mark">🛒</div>
       <div>
         <h1>มีไรกินไร</h1>
         <div class="sub" id="topbarSub">คิดเมนูจากของที่มีอยู่แล้ว</div>
@@ -29,7 +29,7 @@
     <!-- ============ SCREEN: HOME / CAPTURE ============ -->
     <section class="screen active" id="screen-home">
       <div class="hero">
-        <div class="dots"></div>
+        <div class="hero-tag">พิเศษวันนี้</div>
         <h2>ไม่รู้จะกินอะไร?<br>ถ่ายรูปตู้เย็นให้เราดู</h2>
         <p>AI จะช่วยดูว่าคุณมีวัตถุดิบอะไรบ้าง แล้วคิดเมนูที่ทำได้จริงให้ทันที พร้อมแคลอรี่และขั้นตอนทำ</p>
         <label class="capture-box" for="fileInput">
@@ -50,10 +50,11 @@
     <!-- ============ SCREEN: ANALYZING (loading) ============ -->
     <section class="screen" id="screen-analyzing">
       <div class="fridge-loading">
-        <div class="fridge-door-wrap">
-          <div class="fridge-body"></div>
-          <div class="fridge-panel left"></div>
-          <div class="fridge-panel right"></div>
+        <div class="printer-wrap">
+          <div class="printer-paper"></div>
+          <div class="printer-slot"></div>
+          <div class="printer-body"></div>
+          <div class="printer-dot"></div>
         </div>
         <h3 id="loadingTitle">กำลังดูว่าตู้เย็นคุณมีอะไรบ้าง...</h3>
         <p id="loadingSub">แป๊บนึงนะ กำลังแกะรูปอยู่</p>
@@ -66,9 +67,15 @@
         <button class="icon-btn" onclick="goHome()">←</button>
         <h2>เจอวัตถุดิบเหล่านี้</h2>
       </div>
-      <p style="font-size:12.5px;color:var(--text-soft);margin:-6px 0 4px;">แตะ ✕ เพื่อลบ หรือเพิ่มวัตถุดิบที่ AI มองไม่เห็น</p>
-      <div class="magnet-row" id="ingredientChips"></div>
-      <button class="magnet add" id="btnAddIngredient" style="margin-top:10px;">+ เพิ่มวัตถุดิบเอง</button>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-6px 0 4px;font-family:var(--font-body);">แตะ ✕ เพื่อตัดออก หรือเพิ่มวัตถุดิบที่ AI มองไม่เห็น</p>
+      <div class="receipt">
+        <div class="receipt-head">มีไรกินไร
+          <div class="small">ใบสำรวจตู้เย็น · MARKET RECEIPT</div>
+        </div>
+        <div id="ingredientChips"></div>
+        <div class="receipt-barcode"></div>
+      </div>
+      <button class="add-ing-btn" id="btnAddIngredient">+ เพิ่มวัตถุดิบเอง</button>
 
       <div style="margin-top:26px;">
         <button class="btn btn-primary btn-block" id="btnGenerateMenus">🍳 คิดเมนูให้หน่อย</button>
@@ -78,10 +85,11 @@
     <!-- ============ SCREEN: GENERATING MENUS ============ -->
     <section class="screen" id="screen-generating">
       <div class="fridge-loading">
-        <div class="fridge-door-wrap">
-          <div class="fridge-body"></div>
-          <div class="fridge-panel left"></div>
-          <div class="fridge-panel right"></div>
+        <div class="printer-wrap">
+          <div class="printer-paper"></div>
+          <div class="printer-slot"></div>
+          <div class="printer-body"></div>
+          <div class="printer-dot"></div>
         </div>
         <h3>กำลังคิดเมนูให้คุณ...</h3>
         <p>เช็กว่าอะไรทำเร็ว อะไรแคลอรี่ต่ำ</p>
@@ -112,9 +120,9 @@
         <div class="macro-ring">
           <svg width="92" height="92" viewBox="0 0 92 92">
             <circle cx="46" cy="46" r="40" fill="none" stroke="#e7edf0" stroke-width="10"/>
-            <circle id="ringCarb" cx="46" cy="46" r="40" fill="none" stroke="#3fa484" stroke-width="10" stroke-linecap="round"/>
-            <circle id="ringProtein" cx="46" cy="46" r="40" fill="none" stroke="#f2a93b" stroke-width="10" stroke-linecap="round"/>
-            <circle id="ringFat" cx="46" cy="46" r="40" fill="none" stroke="#e2604f" stroke-width="10" stroke-linecap="round"/>
+            <circle id="ringCarb" cx="46" cy="46" r="40" fill="none" stroke="#4c7a3f" stroke-width="10" stroke-linecap="round"/>
+            <circle id="ringProtein" cx="46" cy="46" r="40" fill="none" stroke="#e8a93a" stroke-width="10" stroke-linecap="round"/>
+            <circle id="ringFat" cx="46" cy="46" r="40" fill="none" stroke="#d6482f" stroke-width="10" stroke-linecap="round"/>
           </svg>
           <div class="kcal"><b id="kcalNum">-</b><span>kcal/จาน</span></div>
         </div>

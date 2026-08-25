@@ -125,13 +125,12 @@ async function analyzeImage(base64, mediaType){
 function renderIngredients(){
   const wrap = $('#ingredientChips');
   wrap.innerHTML = state.ingredients.map((ing, idx)=>`
-    <div class="magnet">
-      <span class="pin"></span>
-      <span>${escapeHtml(ing.name)}</span>
-      ${ing.amount ? `<span class="amt">· ${escapeHtml(ing.amount)}</span>` : ''}
-      <button class="rm" onclick="removeIngredient(${idx})" aria-label="ลบ">✕</button>
+    <div class="receipt-line">
+      <span class="name">${escapeHtml(ing.name)}</span>
+      ${ing.amount ? `<span class="amt">${escapeHtml(ing.amount)}</span>` : ''}
+      <button class="rm" onclick="removeIngredient(${idx})" aria-label="ตัดออก">✕</button>
     </div>
-  `).join('');
+  `).join('') || `<div class="receipt-line" style="justify-content:center;color:var(--ink-soft);">ยังไม่มีวัตถุดิบ</div>`;
 }
 function removeIngredient(idx){
   state.ingredients.splice(idx,1);
@@ -253,9 +252,9 @@ function openMenuDetail(id){
   setRing('#ringFat', fatFrac, (carbFrac+proteinFrac)*360, C);
   $('#kcalNum').textContent = menu.calories || '-';
   $('#macroLegend').innerHTML = `
-    <div class="row"><span class="dot" style="background:#3fa484"></span>คาร์บ <b class="mono">${macros.carb||0}g</b></div>
-    <div class="row"><span class="dot" style="background:#f2a93b"></span>โปรตีน <b class="mono">${macros.protein||0}g</b></div>
-    <div class="row"><span class="dot" style="background:#e2604f"></span>ไขมัน <b class="mono">${macros.fat||0}g</b></div>
+    <div class="row"><span class="dot" style="background:#4c7a3f"></span>คาร์บ <b class="mono">${macros.carb||0}g</b></div>
+    <div class="row"><span class="dot" style="background:#e8a93a"></span>โปรตีน <b class="mono">${macros.protein||0}g</b></div>
+    <div class="row"><span class="dot" style="background:#d6482f"></span>ไขมัน <b class="mono">${macros.fat||0}g</b></div>
   `;
 
   // ingredients table
